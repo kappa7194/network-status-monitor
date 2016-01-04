@@ -2,7 +2,10 @@
 {
     using System;
     using System.IO;
+    using System.Net;
+    using System.Net.NetworkInformation;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Microsoft.Owin;
@@ -18,9 +21,42 @@
 
             Log.Application.Info("Application started.");
 
+            var address = new IPAddress(0x08080808);
+            var buffer = new byte[0];
+            var pingOptions = new PingOptions(32, true);
+
             using (WebApp.Start("http://localhost:8080/", Startup))
             {
-                Console.ReadKey(true);
+                TimerCallback callback =
+                    state =>
+                    {
+                        var moment = DateTimeOffset.Now;
+
+                        using (var ping = new Ping())
+                        {
+                            PingReply pingReply;
+
+                            try
+                            {
+                                pingReply = ping.Send(address, 100, buffer, pingOptions);
+                            }
+                            catch (PingException)
+                            {
+                                Log.Status.Info("{0:yyyy-MM-dd HH:mm:ss} Error 0", moment);
+
+                                return;
+                            }
+
+                            Log.Status.Info("{0:yyyy-MM-dd HH:mm:ss} {1:F} {2:D}", moment, pingReply.Status, pingReply.RoundtripTime);
+                        }
+                    };
+
+                using (var timer = new Timer(callback, null, 0, 1000))
+                {
+                    Console.ReadKey(true);
+
+                    timer.Change(-1, -1);
+                }
             }
 
             Log.Application.Info("Application stopped.");
