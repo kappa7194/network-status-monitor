@@ -1,1 +1,5 @@
+*.config text
+*.cs text
+*.csproj text
+*.sln text
 *.txt text
