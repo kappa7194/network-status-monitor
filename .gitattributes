@@ -1,6 +1,7 @@
 *.config text
 *.cs text
 *.csproj text
+*.pfx binary
 *.sln text
 *.txt text
 *.xsd text
