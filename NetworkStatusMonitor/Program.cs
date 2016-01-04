@@ -1,6 +1,7 @@
 ﻿namespace NetworkStatusMonitor
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Net;
     using System.Net.NetworkInformation;
@@ -108,7 +109,11 @@
 
             if (context.Request.Path.Value.Equals("/", StringComparison.OrdinalIgnoreCase))
             {
-                await HomePageHandlerAsync(context.Response);
+                await EverythingHandlerAsync(context.Response);
+            }
+            else if (context.Request.Path.Value.Equals("/ERRORS", StringComparison.OrdinalIgnoreCase))
+            {
+                await ErrorsHandlerAsync(context.Response);
             }
             else
             {
@@ -118,16 +123,75 @@
             Log.Application.Debug("Web request handler completed.");
         }
 
-        private static async Task HomePageHandlerAsync(IOwinResponse response)
+        private static async Task EverythingHandlerAsync(IOwinResponse response)
         {
-            Log.Application.Debug("Home page handler started.");
+            Log.Application.Debug("Everything handler started.");
+
+            var lines = new List<string>();
+
+            using (var stream = new FileStream(@"Logs\Status.log", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    var line = await reader.ReadLineAsync();
+
+                    while (line != null)
+                    {
+                        lines.Add(line);
+
+                        line = await reader.ReadLineAsync();
+                    }
+                }
+            }
+
+            lines.Reverse();
 
             using (var streamWriter = new StreamWriter(response.Body))
             {
-                await streamWriter.WriteLineAsync("TODO");
+                foreach (var line in lines)
+                {
+                    await streamWriter.WriteLineAsync(line);
+                }
             }
 
-            Log.Application.Debug("Home page handler completed.");
+            Log.Application.Debug("Everything handler completed.");
+        }
+
+        private static async Task ErrorsHandlerAsync(IOwinResponse response)
+        {
+            Log.Application.Debug("Errors handler started.");
+
+            var lines = new List<string>();
+
+            using (var stream = new FileStream(@"Logs\Status.log", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    var line = await reader.ReadLineAsync();
+
+                    while (line != null)
+                    {
+                        if (line.IndexOf("SUCCESS", StringComparison.OrdinalIgnoreCase) == -1)
+                        {
+                            lines.Add(line);
+                        }
+
+                        line = await reader.ReadLineAsync();
+                    }
+                }
+            }
+
+            lines.Reverse();
+
+            using (var streamWriter = new StreamWriter(response.Body))
+            {
+                foreach (var line in lines)
+                {
+                    await streamWriter.WriteLineAsync(line);
+                }
+            }
+
+            Log.Application.Debug("Errors handler completed.");
         }
 
         private static async Task ResourceNotFoundHandlerAsync(IOwinResponse response)
